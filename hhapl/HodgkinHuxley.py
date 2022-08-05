@@ -33,9 +33,7 @@ class HodgkinHuxley():
         self.g_na, self.g_k, self.g_leak = 120.0, 36.0, 0.3
 
         # reversal potentials
-        self.e_na = 50.0
-        self.e_k = -77.0
-        self.e_leak = -54.387
+        self.e_na, self.e_k, self.e_leak = 50.0, -77.0, -54.387
 
     def set_parms(self, max_conduct, rev_potential):
         """
@@ -439,9 +437,9 @@ class HodgkinHuxley():
             V, m, h, n = X
 
             dVdt = -self._I_channel(V, m, h, n)
-            dmdt = self._alpha_m(V)*(1.0-m) - self._beta_m(V)*m
-            dhdt = self._alpha_h(V)*(1.0-h) - self._beta_h(V)*h
-            dndt = self._alpha_n(V)*(1.0-n) - self._beta_n(V)*n
+            dmdt = self._alpha_m(V)*(1.0 - m) - self._beta_m(V) * m
+            dhdt = self._alpha_h(V)*(1.0 - h) - self._beta_h(V) * h
+            dndt = self._alpha_n(V)*(1.0 - n) - self._beta_n(V) * n
 
             return dVdt, dmdt, dhdt, dndt
         return np.round(fsolve(_equations, [self.e_m, .0, .0, .0]), 2)
