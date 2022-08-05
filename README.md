@@ -15,12 +15,21 @@ The project generates the plots 'on the fly' based on the choosen inputs. The ca
 
 This application was developed as a term project for the Scientific Python course (summer '22) of the Cognitive Science program at Osnabrück University by Christian Rohde.
 
-## Requirements
+## Features
 
-- Virtual environment via conda:
-  ```shell
-  conda env create -f environment.yml
-  ```
+- standalone web application
+- interactive figures controlled via user input through widgets
+- efficient background calculations
+- topics
+  - sodium channel activation and inactivation
+  - voltage dependence potassium channel
+  - phases of action potential
+  - chemical manipulation of ion channels
+  - refractory periods
+  - spike trains
+  - parameter dependence of the Hodgkins and Huxley model
+
+## Requirements
 
 - Installation via pip:
   ```shell
