@@ -1,170 +1,340 @@
 import numpy as np
+
 from scipy.integrate import solve_ivp
 from scipy.optimize import fsolve
 
-# numerical integration fail
 from func_timeout import func_timeout, FunctionTimedOut
-import time
 
 
 class HodgkinHuxley():
-    """Hodgkin-Huxley model class"""
+    """
+    Hodgkin-Huxley model class
+
+    Holds the model parameter and functions to calculate (simulation via
+    numerical integration) the model with given inputs.
+    """
 
     def __init__(self):
-
-        # membrane capacitance, in uF/cm^2
-        self.C_m = 1.0
+        """
+        Initilize the Hodgkin-Huxley model class with the initial parameters.
+        """
+        # lipid bilayer capacitance is assumed to be at 1
+        self.c_m = 1.0
         self.init_parms()
 
     def init_parms(self):
-        self.Em = -65.0
-        self.gNa, self.gK, self.gL = 120.0, 36.0, 0.3
-        # np.array for broadcasting in _V()
-        self.ENa, self.EK, self.EL = self._V(np.array([-115.0, 12.0, -10.613]))
+        """
+        Initilize parameters according to Hodgkin and Huxley's original paper.
+        """
+        # resting membrane potential
+        self.e_m = -65.0
+
+        # conductance
+        self.g_na, self.g_k, self.g_leak = 120.0, 36.0, 0.3
+
+        # reversal potentials
+        self.e_na = 50.0
+        self.e_k = -77.0
+        self.e_leak = -54.387
 
     def set_parms(self, max_conduct, rev_potential):
-        self.gNa, self.gK, self.gL = max_conduct
-        self.ENa, self.EK, self.EL = self._V(rev_potential)
+        """
+        Helper function for setting the parameters.
+        """
+        self.g_na, self.g_k, self.g_leak = max_conduct
+        self.e_na, self.e_k, self.e_leak = rev_potential
 
     def reset_parms(self):
+        """
+        Helper function to make name more expressive.
+        """
         self.init_parms()
-
-    def _V(self, Vm):
-        return self.Em - Vm
 
     def _alpha_n(self, V):
         """
-        gating kinetics,
-        parameter: of membrane voltage
-        """
+        Calculate alpha_n function for gating kinetics, helper function
+        of membrane voltage.
 
-        return .01 * ((self._V(V)+10) / (np.exp((self._V(V)+10)/10)-1))
+        Parameters
+        ----------
+        V : float
+            membrane voltage
+
+        Returns
+        -------
+        result : float
+            value
+        """
+        return .01 * (V + 55.0) / (1.0 - np.exp(-(V + 55.0) / 10.0))
 
     def _beta_n(self, V):
-        """Channel gating kinetics. Functions of membrane voltage"""
         """
-        gating kinetics,
-        parameter: of membrane voltage
-        """
+        Calculate beta_n function for gating kinetics, helper function
+        of membrane voltage.
 
-        return .125*np.exp(self._V(V)/80)
+        Parameters
+        ----------
+        V : float
+            membrane voltage
+
+        Returns
+        -------
+        result : float
+            value
+        """
+        return .125 * np.exp(-(V + 65.0) / 80.0)
 
     def _alpha_h(self, V):
         """
-        gating kinetics,
-        parameter: of membrane voltage
-        """
+        Calculate alpha_h function for gating kinetics, helper function
+        of membrane voltage.
 
-        return .07*np.exp(self._V(V)/20)
+        Parameters
+        ----------
+        V : float
+            membrane voltage
+
+        Returns
+        -------
+        result : float
+            value
+        """
+        return .07 * np.exp(-(V + 65.0) / 20.0)
 
     def _beta_h(self, V):
         """
-        gating kinetics,
-        parameter: of membrane voltage
-        """
+        Calculate beta_h function for gating kinetics, helper function
+        of membrane voltage.
 
-        return 1 / (np.exp((self._V(V)+30)/20) + 1)
+        Parameters
+        ----------
+        V : float
+            membrane voltage
+
+        Returns
+        -------
+        result : float
+            value
+        """
+        return 1.0 / (1.0 + np.exp(-(V + 35.0) / 10.0))
 
     def _alpha_m(self, V):
         """
-        gating kinetics,
-        parameter: of membrane voltage
+        Calculate alpha_m function for gating kinetics, helper function
+        of membrane voltage.
+
+        Parameters
+        ----------
+        V : float
+            membrane voltage
+
+        Returns
+        -------
+        result : float
+            value
         """
-        return .1*((self._V(V)+25) / (np.exp((self._V(V)+25)/10)-1))
+        return .1 * (V + 40.0)/(1.0 - np.exp(-(V + 40.0) / 10.0))
 
     def _beta_m(self, V):
         """
-        gating kinetics,
-        parameter: of membrane voltage
-        """
+        Calculate beta_m function for gating kinetics, helper function
+        of membrane voltage.
 
-        return 4 * np.exp(self._V(V)/18)
+        Parameters
+        ----------
+        V : float
+            membrane voltage
 
-    def C_Na(self, m, h):
+        Returns
+        -------
+        result : float
+            value
         """
-        sodium membrane current (in uA/cm^2)
-        parameter: V, m, h
-        """
-        return self.gNa * m**3 * h
+        return 4.0 * np.exp(-(V + 65.0) / 18.0)
 
-    def C_K(self, n):
+    def cond_na(self, m, h):
         """
-        potassim membrane current (in uA/cm^2)
-        parameter: V, n
+        Calculate sodium membrane conductance (in uA/cm^2)
+
+        Parameters
+        ----------
+        m : float
+            probability for sodium channel subunit activation
+        h : float
+            probability for sodium channel subunit inactivation
+
+        Returns
+        -------
+        result : float
+            sodium conductance
         """
-        return self.gK * n**4
+        return self.g_na * np.power(m, 3) * h
+
+    def cond_k(self, n):
+        """
+        Calculate potassim membrane conductance (in uA/cm^2)
+
+        Parameters
+        ----------
+        n : float
+            probability for potassium channel subunit activation
+
+        Returns
+        -------
+        result : float
+            potassium conductance
+        """
+        return self.g_k * np.power(n, 4)
 
     #  Leak
-    def C_L(self):
+    def cond_leak(self):
         """
-        leak membrane current (in uA/cm^2)
-        parameter: V
+        leak membrane conductance (in uA/cm^2)
+
+        Returns
+        -------
+        result : float
+            leak conductance
         """
-        return self.gL
+        return self.g_leak
 
     def _I_channel(self, V, m, h, n):
         """
-        membrane current due to ion channels (Na+, K+ and Leak) (in uA/cm^2)
-        parameter: V
+        Calculate the membrane current due to ion channels (Na+, K+ and Leak)
+        (in uA/cm^2)
+
+        Parameters
+        ----------
+        V : float
+            membrane voltage
+        m : float
+            probability for sodium channel subunit activation
+        h : float
+            probability for sodium channel subunit inactivation
+        n : float
+            probability for potassium channel subunit activation
+
+        Returns
+        -------
+        result : float
+            membrane current due to ion channels
         """
-        return self.C_Na(m, h) * (V - self.ENa) \
-            + self.C_K(n) * (V - self.EK) \
-            + self.C_L() * (V - self.EL)
+        return self.cond_na(m, h) * (V - self.e_na) \
+            + self.cond_k(n) * (V - self.e_k) \
+            + self.cond_leak() * (V - self.e_leak)
 
     def _I_inj(self, t, inputs):
         """
-        input current
+        Calculate the injected voltage at time t.
+
+        Parameters
+        ----------
+        t : float
+            time varible
+        inputs : list of int (3*n,)
+            list of [start, end, voltage] repeated varible times
+
+        Returns
+        -------
+        results : float
+            clamped current at t
         """
         injected = 0
-        for (t0, Vc) in inputs:
-            injected += Vc*(t > t0) - Vc * (t > t0+1)
+        for (t0, t1, vol) in inputs:
+            injected += vol * (t > t0) - vol * (t > t1)
 
         return injected
 
-    def _I_clamped(self, t, start, end, Vc):
+    def _I_clamped(self, t, inputs):
         """
-        input current
+        Calculate the clamped voltage at time t.
+
+        Parameters
+        ----------
+        t : float
+            time varible
+        inputs : list of int (3,)
+            list of [start, end, voltage] repeated varible times
+
+        Returns
+        -------
+        results : float
+            clamped current at t
         """
-        return Vc*(t > start) - Vc * (t > end) + self.Em
+        t0, t1, vol = inputs
+        return vol * (t > t0) - vol * (t > t1) + self.e_m
 
     @staticmethod
-    def _equations_clamped(t, X, inputs, self):
+    def _equations_clamped(t, vars, inputs, self):
         """
-        integrate
-        """
-        m, h, n = X
-        # time.sleep(3)
-        start, end, Vc = inputs
+        Set of different equations to be integrated for simulation of
+        clamped voltage. Note that the clamped and injected equations
+        are in seperate functions for better readability.
 
-        V = self._I_clamped(t, start, end, Vc)
-        dmdt = self._alpha_m(V)*(1.0-m) - self._beta_m(V)*m
-        dhdt = self._alpha_h(V)*(1.0-h) - self._beta_h(V)*h
-        dndt = self._alpha_n(V)*(1.0-n) - self._beta_n(V)*n
-        return dmdt, dhdt, dndt
+        Parameters
+        ----------
+        t : float
+            time varible
+        vars : array-like, only called as ndarray of floats (3,)
+            holds varibles for m, h and n
+        inputs : list of int (3*n,)
+            list of [start, end, voltage] repeated varible times
+
+        Returns
+        -------
+        results : ndarray, shape (3,)
+            results for the differentials at t
+        """
+        m, h, n = vars
+
+        V = self._I_clamped(t, inputs)
+        dmdt = self._alpha_m(V) * (1.0 - m) - self._beta_m(V) * m
+        dhdt = self._alpha_h(V) * (1.0 - h) - self._beta_h(V) * h
+        dndt = self._alpha_n(V) * (1.0 - n) - self._beta_n(V) * n
+        return np.array([dmdt, dhdt, dndt], dtype=object)
 
     @staticmethod
-    def _equations_injected(t, X, inputs, blocked_Na, blocked_K, self):
+    def _equations_injected(t, vars, inputs, blocked_Na, blocked_K, self):
         """
-        integrate
+        Set of different equations to be integrated for simulation of
+        injected current.
+
+        Parameters
+        ----------
+        t : float
+            time varible
+        vars : array-like, only called as ndarray of floats (4,)
+            holds varibles for voltage, m, h and n
+        inputs : list of int (3*n,)
+            list of [start, end, voltage] repeated varible times
+        blocked_Na : bool (default: False)
+            if True sodium channel is blocked
+        blocked_K : bool (default: False)
+            if True potassium channel is blocked
+
+        Returns
+        -------
+        results : ndarray, shape (4,)
+            results for the differentials at t
         """
 
-        V, m, h, n = X
+        V, m, h, n = vars
 
-        dVdt = (self._I_inj(t, inputs) - self._I_channel(V, m, h, n)) / self.C_m
+        dVdt = (self._I_inj(t, inputs) - self._I_channel(V, m, h, n)) / self.c_m
 
         if blocked_Na:
             dmdt = 0
         else:
-            dmdt = self._alpha_m(V)*(1.0-m) - self._beta_m(V)*m
+            dmdt = self._alpha_m(V) * (1.0 - m) - self._beta_m(V) * m
 
-        dhdt = self._alpha_h(V)*(1.0-h) - self._beta_h(V)*h
+        dhdt = self._alpha_h(V) * (1.0 - h) - self._beta_h(V) * h
 
         if blocked_K:
             dndt = 0
         else:
-            dndt = self._alpha_n(V)*(1.0-n) - self._beta_n(V)*n
+            dndt = self._alpha_n(V) * (1.0 - n) - self._beta_n(V) * n
 
-        return dVdt, dmdt, dhdt, dndt
+        return np.array([dVdt, dmdt, dhdt, dndt], dtype=object)
 
     def simulation(self, sim_interval, clamped, inputs,
                    blocked_Na=False, blocked_K=False):
@@ -191,15 +361,16 @@ class HodgkinHuxley():
 
         Returns
         -------
-        results : np.Array
-            matrix of simulation results,
+        results : Bunch object (fields 't' and 'y' of type ndarray)
+            object of which we later use the fields 't' and 'y',
+            't' time steps, 'y' matrix of simulation results:
             dimension dependant on number of varibles to simulate
             (3 for clamped, 4 for injected) and number of time steps
             of the solver (see t_eval)
         """
 
         initial_values = self._get_initial_values()
-        self.Em = initial_values[0]
+        self.e_m = initial_values[0]
 
         if clamped:
             # arguments passed to the respective equations function
@@ -214,6 +385,12 @@ class HodgkinHuxley():
         else:
             args_equations = [inputs, blocked_Na, blocked_K, self]
             fct = self._equations_injected
+
+            # here we need to tweak the model because with one of the ion
+            # channels, the numerical intergration is unstable:
+            # so we set different initial values
+            if blocked_Na or blocked_K:
+                initial_values = [-65.0, 0.05, 0.6, 0.32]
 
         # arguments to be passed to solve_ivp as dictionary (kwargs)
         kwargs_ivp = {'method': 'RK23',
@@ -255,7 +432,7 @@ class HodgkinHuxley():
 
         Returns
         -------
-        results : np.Array (shape 4x1)
+        results : ndarray, shape (4,)
             optimisation results: initial values for diffeq
         """
         def _equations(X):
@@ -267,4 +444,4 @@ class HodgkinHuxley():
             dndt = self._alpha_n(V)*(1.0-n) - self._beta_n(V)*n
 
             return dVdt, dmdt, dhdt, dndt
-        return np.round(fsolve(_equations, [self.Em, .0, .0, .0]), 2)
+        return np.round(fsolve(_equations, [self.e_m, .0, .0, .0]), 2)

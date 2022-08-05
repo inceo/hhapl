@@ -2,12 +2,14 @@ import numpy as np
 import time
 
 # ipywidgets as interactive Widgets for the Jupyter notebooks (and Voila)
-from ipywidgets import Layout, VBox, Button, Dropdown, BoundedIntText
+from ipywidgets import Layout, VBox, HBox, Button, Dropdown, \
+    BoundedIntText, IntSlider, Output
+
+from IPython.display import display, clear_output
 
 # bqplot as plotting library for Jupyter notebooks
 import bqplot.pyplot as plt
 from bqplot.interacts import BrushIntervalSelector
-from bqplot import Label, LinearScale, Axis, Lines, Figure
 
 # project classes
 from hhapl import HodgkinHuxley
@@ -16,13 +18,14 @@ from hhapl import HodgkinHuxley
 # https://github.com/jupyter-widgets/ipywidgets/issues/2103
 import functools
 
+
 class Plots(HodgkinHuxley.HodgkinHuxley):
     """
     Plot class for the Hodgkin-Huxley action potential lab
-    
-    - generates all plots displayed in the application
-    - initilizes bqplot figures and interactive Widgets
-    - interacts with user input and manages the animations
+
+    It generates all plots displayed in the application, initilizes bqplot
+    figures and interactive Widgets and interacts with user input and manages
+    the animations.
     """
 
     def __init__(self):
@@ -30,32 +33,18 @@ class Plots(HodgkinHuxley.HodgkinHuxley):
         Initilizing the plot class and inheriting Hodgkin-Huxley model class
         """
         super().__init__()
-        
-        #  standard parameters
-        self.interval = (0, 20)
-        self.clamped = True
-        self.start = 5
-        self.end = 15
-        
-    def calc(self, Vc):
-        # TODO redundant function
-        X = self.simulation(self.interval, self.clamped, [self.start, self.end, Vc], '')
-        if isinstance(X, str):
-            print(X)
-        V = Vc * np.logical_and(X.t > self.start, X.t < self.end)
-        
-        return V, X
 
-        
-    def init_figure(self, width, height, label, xlim, ylim, num_lines, ap_labels = False):
+    def init_figure(self, width, height, label, xlim, ylim,
+                    num_lines, ap_labels=False):
         """
         Initilize figure
-        
-        bqplot allows only to change (adding elements such as marks) the current figure,
-        but we are mostly dealing with multiple-figure-plots and since subplots are not
-        available in bqplot, we pre-register or initilize all elements (marks). We do
-        this to have a consistent order to later animate or manipulate specific marks.
-        
+
+        bqplot allows only to change (adding elements such as marks) the
+        current figure, but we are mostly dealing with multiple-figure-plots
+        and since subplots are not available in bqplot, we pre-register or
+        initilize all elements (marks). We do this to have a consistent order
+        to later animate or manipulate specific marks.
+
         Parameters
         ----------
         width : int
@@ -74,28 +63,28 @@ class Plots(HodgkinHuxley.HodgkinHuxley):
             number of lines added to the figure
         ap_labels : bool
             if True, add predefined marks (vline, hline, label) to the figure
-            in order to highlight the stages of an action potential (ap)           
-            
+            in order to highlight the stages of an action potential (ap)
+
         Returns
         -------
         fig : bqplot.figure.Figure object
             figure object
         """
         fig = plt.figure()
-        
+
         axes_options = {
             "color": {"visible": False},
         }
-        
+
         # TODO better colors
-        colors = [['blue'],['green'],['red'],['orange']]
-        
+        colors = [['blue'], ['green'], ['red'], ['orange']]
+
         # set the number of lines, values to be set on runtime (animation)
         # [0] to fixate certain color to certain line ([] would not work)
         for i in range(num_lines):
             plt.plot([0], [0], colors=colors[i], axes_options=axes_options)
             # TODO legend for conductance
-            
+
         # TODO for
         if ap_labels:
             plt.hline(level=-55, line_style='dashed', stroke_width=1, label='Threshold')
@@ -120,356 +109,659 @@ class Plots(HodgkinHuxley.HodgkinHuxley):
         fig.layout.width = width
         fig.layout.height = height
         fig.layout.padding = '0px'
-        fig.fig_margin={'top':10, 'bottom':35, 'left':50, 'right':50}
-        
-        fig.legend=False
-        
+        fig.fig_margin = {'top': 10, 'bottom': 35, 'left': 50, 'right': 50}
+
+        fig.legend = False
+
         return fig
-    
+
     def plot_Na(self):
         """
-        calculate and plot
-        """
-        
-        fig_voltage = self.init_figure('400px', '200px', 'Clamped voltage', self.interval, (-1, 100), 4)
-        fig_conductance = self.init_figure('400px', '200px', 'Conductance', self.interval, (-1, 20), 4)
-        
-        # TODO for
-        b20 = Button(description='20 mV')
-        b40 = Button(description='40 mV')
-        b60 = Button(description='60 mV')
-                
-        def play(b, Vc):
-            self.reset_parms()
-            V, X = self.calc(Vc)
-            m, h, _ = X.y
-            na_conductance = self.C_Na(m, h)
-            
-            # TODO
-            match Vc:
-                case 20:
-                    l_V = fig_voltage.marks[0]
-                    l_C = fig_conductance.marks[0]
-                case 40:
-                    l_V = fig_voltage.marks[1]
-                    l_C = fig_conductance.marks[1]
-                case 60:
-                    l_V = fig_voltage.marks[2]
-                    l_C = fig_conductance.marks[2]
-                case _:
-                    l_V = fig_voltage.marks[3]
-                    l_C = fig_conductance.marks[3]
-                        
-            for i in range(len(V)):
-                time.sleep(0.025)
-                
-                with l_V.hold_sync(), l_C.hold_sync():
-                    l_V.x = X.t
-                    l_V.y = V[:i]
-                    l_C.x = X.t
-                    l_C.y = na_conductance[:i]
+        Plot for sodium ion channel. Demonstrates the inactivation.
+        Initilizes Widgets and plots and runs animation.
 
-        b20.on_click(functools.partial(play, Vc=20))
-        b40.on_click(functools.partial(play, Vc=40))
-        b60.on_click(functools.partial(play, Vc=60))
-                    
-        display(VBox([b20, b40, b60, fig_conductance, fig_voltage], layout=Layout(align_items='center', width='500px')))
+        This function is to be called from a Jupyter notebook.
+        """
+
+        interval = (0, 20)
+        button_config = [20, 40, 60, 0]
+
+        fig_voltage = self.init_figure('400px', '200px', 'Clamped voltage',
+                                       interval, (-1, 100), 4)
+        fig_conductance = self.init_figure('400px', '200px', 'Conductance',
+                                           interval, (-1, 40), 4)
+
+        buttons = [Button(description='mV') if v == 0
+                   else Button(description=str(v) + ' mV')
+                   for v in button_config]
+
+        slider = IntSlider(value=50, min=1, max=100, step=1,
+                           continuous_update=True,
+                           readout=True)
+
+        out = Output()
+
+        def play(b, bidx):
+            """
+            Mark animation function
+
+            Parameters
+            ----------
+            b : ipywidget Button object
+                needs to be passed as firsnt parameter
+            bidx : int
+                Button index which is used to get the voltage
+            """
+
+            # reset parms because parameters can be manipulated during runtime
+            # and here we want the standard parameters
+            self.reset_parms()
+            with out:
+                clear_output()
+
+            if button_config[bidx] == 0:
+                vol = slider.value
+            else:
+                vol = button_config[bidx]
+
+            # call simulation
+            res = self.simulation(interval, True, [5, 15, vol])
+
+            # check for excetions
+            if isinstance(res, str):
+                with out:
+                    print(res)
+            else:
+                V = vol * np.logical_and(res.t > 5,
+                                         res.t < 15)
+
+                # for sodium,only m and h (activation and inactivation)
+                m, h, _ = res.y
+
+                # calculate the sodium conductance beforehand (performance)
+                na_conductance = self.cond_na(m, h)
+
+                # get correct line corresponding to pressed Button
+                line_voltage = fig_voltage.marks[bidx]
+                line_conductancu = fig_conductance.marks[bidx]
+
+                # animation loop
+                for i in range(len(V)):
+                    # animation speed
+                    time.sleep(0.025)
+
+                    with line_voltage.hold_sync(), \
+                            line_conductancu.hold_sync():
+                        line_voltage.x = res.t
+                        line_voltage.y = V[:i]
+                        line_conductancu.x = res.t
+                        line_conductancu.y = na_conductance[:i]
+
+        for idx, b in enumerate(buttons):
+            b.on_click(functools.partial(play, bidx=idx))
+
+        display(VBox([*buttons[:3],
+                      HBox([slider, buttons[3]]),
+                      fig_conductance, fig_voltage, out],
+                     layout=Layout(align_items='center', width='500px')))
 
     def plot_K(self):
         """
-        calculate and plot
-        """
-        
-        # labels: MathJax not supported with bqplot
-        fig_voltage = self.init_figure('400px', '200px', 'Clamped voltage', self.interval, (-1, 100), 4)
-        fig_C_Na = self.init_figure('400px', '200px', 'Conductance (Na)', self.interval, (-1, 20), 4) 
-        fig_C_K = self.init_figure('400px', '200px', 'Conductance (K)', self.interval, (-1, 50), 4)
-        
-        b20 = Button(description='20 mV')
-        b40 = Button(description='40 mV')
-        b60 = Button(description='60 mV')
-                
-        def play(b, Vc):
-            self.reset_parms()
-            V, X = self.calc(Vc)
-            m, h, n = X.y
-            na_conductance = self.C_Na(m, h)
-            k_conductance = self.C_K(n)
-            
-            # TODO
-            match Vc:
-                case 20:
-                    Vol = fig_voltage.marks[0]
-                    C_Na = fig_C_Na.marks[0]
-                    C_K = fig_C_K.marks[0]
-                case 40:
-                    Vol = fig_voltage.marks[1]
-                    C_Na = fig_C_Na.marks[1]
-                    C_K = fig_C_K.marks[1]
-                case 60:
-                    Vol = fig_voltage.marks[2]
-                    C_Na = fig_C_Na.marks[2]
-                    C_K = fig_C_K.marks[2]
-                case _:
-                    Vol = fig_voltage.marks[3]
-                    C_Na = fig_C_Na.marks[3]
-                    C_K = fig_C_K.marks[3]
-                        
-            for i in range(len(V)):
-                time.sleep(0.025)
-                
-                with Vol.hold_sync(), C_Na.hold_sync(), C_K.hold_sync():
-                    Vol.x = X.t
-                    Vol.y = V[:i]
-                    C_Na.x = X.t
-                    C_Na.y = na_conductance[:i]
-                    C_K.x = X.t
-                    C_K.y = k_conductance[:i]
-                    
+        Plot for potassium and sodium ion channel. Demonstrates the
+        voltage-dependance of the K+ channel.
 
-        b20.on_click(functools.partial(play, Vc=20))
-        b40.on_click(functools.partial(play, Vc=40))
-        b60.on_click(functools.partial(play, Vc=60))
-                    
-        display(VBox([b20, b40, b60, fig_C_Na, fig_C_K, fig_voltage], layout=Layout(align_items='center', width='500px')))
+        Initilizes Widgets and plots and runs animation.
+
+        This function is to be called from a Jupyter notebook.
+        """
+
+        interval = (0, 20)
+        button_config = [20, 40, 60, 0]
+
+        fig_voltage = self.init_figure('400px', '200px', 'Clamped voltage',
+                                       interval, (-1, 100), 4)
+        fig_conductance_na = self.init_figure('400px', '200px', 'Conductance',
+                                              interval, (-1, 50), 4)
+        fig_conductance_k = self.init_figure('400px', '200px', 'Conductance',
+                                             interval, (-1, 50), 4)
+
+        buttons = [Button(description='mV') if v == 0
+                   else Button(description=str(v) + ' mV')
+                   for v in button_config]
+
+        slider = IntSlider(value=50, min=1, max=100, step=1,
+                           continuous_update=True,
+                           readout=True,
+                           width=50)
+
+        out = Output()
+
+        def play(b, bidx):
+            """
+            Mark animation function
+
+            Parameters
+            ----------
+            b : ipywidget Button object
+                needs to be passed as firsnt parameter
+            bidx : int
+                Button index which is used to get the voltage
+            """
+
+            # reset parms because parameters can be manipulated during runtime
+            # and here we want the standard parameters
+            self.reset_parms()
+            with out:
+                clear_output()
+
+            if button_config[bidx] == 0:
+                vol = slider.value
+            else:
+                vol = button_config[bidx]
+
+            # call simulation
+            res = self.simulation(interval, True, [5, 15, vol])
+
+            # check for excetions
+            if isinstance(res, str):
+                with out:
+                    print(res)
+            else:
+                V = vol * np.logical_and(res.t > 5,
+                                         res.t < 15)
+
+                # for sodium, only m and h (activation and inactivation)
+                # for potassium, n (activation)
+                m, h, n = res.y
+
+                # calculate the sodium conductance beforehand (performance)
+                na_conductance = self.cond_na(m, h)
+                k_conductance = self.cond_k(n)
+
+                # get correct line corresponding to pressed Button
+                line_voltage = fig_voltage.marks[bidx]
+                line_conductance_na = fig_conductance_na.marks[bidx]
+                line_conductance_k = fig_conductance_k.marks[bidx]
+
+                # animation loop
+                for i in range(len(V)):
+                    # animation speed
+                    time.sleep(0.025)
+
+                    with line_voltage.hold_sync(), \
+                            line_conductance_k.hold_sync(), \
+                            line_conductance_na.hold_sync():
+                        line_voltage.x = res.t
+                        line_voltage.y = V[:i]
+                        line_conductance_na.x = res.t
+                        line_conductance_na.y = na_conductance[:i]
+                        line_conductance_k.x = res.t
+                        line_conductance_k.y = k_conductance[:i]
+
+        for idx, b in enumerate(buttons):
+            b.on_click(functools.partial(play, bidx=idx))
+
+        display(VBox([*buttons[:3],
+                      HBox([slider, buttons[3]]),
+                      fig_conductance_na, fig_conductance_k, fig_voltage, out],
+                     layout=Layout(align_items='center', width='500px')))
 
     def plot_AP(self):
         """
-        calculate and plot
+        Plot for action potential.
+
+        Initilizes Widgets and plots and runs animation.
+
+        This function is to be called from a Jupyter notebook.
         """
-        interval = (0,50)
+        interval = (0, 30)
+        button_config = [5, 15, 0]
 
-        # labels: MathJax not supported with bqplot
-        fig_conductance = self.init_figure('700px', '200px', 'Conductance (K)', interval, (-1, 50), 2, True)
-        fig_voltage = self.init_figure('700px', '400px', 'Membrane voltage', interval, (-100, 100), 1, True)
-        
-        b20 = Button(description='-50 mV')
-        b40 = Button(description='10 mV')
-        b60 = Button(description='15 mV')
-                
-        def play(b, Vc):
+        fig_conductance = self.init_figure('700px', '200px',
+                                           'Conductance (K)',
+                                           interval, (-1, 50), 2, True)
+
+        fig_voltage = self.init_figure('700px', '400px',
+                                       'Membrane voltage',
+                                       interval, (-120, 80), 1, True)
+
+        buttons = [Button(description='mV') if v == 0
+                   else Button(description=str(v) + ' mV')
+                   for v in button_config]
+
+        slider = IntSlider(value=50, min=-80, max=100, step=1,
+                           continuous_update=True,
+                           readout=True)
+
+        out = Output()
+
+        def play(b, bidx):
+            """
+            Mark animation function
+
+            Parameters
+            ----------
+            b : ipywidget Button object
+                needs to be passed as firsnt parameter
+            bidx : int
+                Button index which is used to get the voltage
+            """
+
+            # reset parms because parameters can be manipulated during runtime
+            # and here we want the standard parameters
             self.reset_parms()
-            X = self.simulation(interval, False, [(5, Vc)])
-            #print(X.y)
-            V, m, h, n = X.y
-            depol = False
-            
-            na_conductance = self.C_Na(m, h)
-            k_conductance = self.C_K(n)
-            
-            # index for label timesteps: 0=depolarisation, 1=repolarisation, 2=hyperpolarisation
-            j = 0
-            
-            # positioning offset of the labels
-            offset = np.array([[-1, 10],
-                               [0, 10],
-                               [1, -15]])
-            
-            # reset (hide) AP label marks
-            # TODO mark counter
-            for mark in fig_voltage.marks[3:] + fig_conductance.marks[2:]:
-                mark.x = [-50]
+            with out:
+                clear_output()
 
-            Vol = fig_voltage.marks[0]
-            C1 = fig_conductance.marks[0]
-            C2 = fig_conductance.marks[1]
-            
-            if np.max(V) > -55:
-                depol = True
-                idx_repol = np.argmax(V)
-                timesteps = [np.argmax(V > -55), idx_repol, idx_repol + np.argmax(V[idx_repol:] < self.Em)]
+            if button_config[bidx] == 0:
+                vol = slider.value
+            else:
+                vol = button_config[bidx]
 
-            for i in range(len(X.t)):
-                time.sleep(0.025)
-                
-                if depol:
-                    if i == timesteps[j] + 2:
-                        fig_voltage.marks[2*(j+1) + 1].x = [X.t[timesteps[j]], X.t[timesteps[j]]]
-                        fig_conductance.marks[2*(j+2)].x = [X.t[timesteps[j]], X.t[timesteps[j]]]
-                        
-                        fig_voltage.marks[2*(j+1) + 2].x = [X.t[timesteps[j]] + offset[j][0]]
-                        fig_voltage.marks[2*(j+1) + 2].y = [V[timesteps[j]] + offset[j][1]]
-                        j += 1
-                        if j > 2:
-                            depol = False
-                        time.sleep(1)
-                
-                with Vol.hold_sync(), C1.hold_sync(), C2.hold_sync():
-                    C1.x = X.t
-                    C1.y = na_conductance[:i]
-                    C2.x = X.t
-                    C2.y = k_conductance[:i]
-                    Vol.x = X.t
-                    Vol.y = V[:i]
+            # call simulation
+            res = self.simulation(interval, False, [(5, 6, vol)])
 
-        b20.on_click(functools.partial(play, Vc=-100))
-        b40.on_click(functools.partial(play, Vc=10))
-        b60.on_click(functools.partial(play, Vc=15))
-                    
-        display(VBox([b20, b40, b60, fig_voltage, fig_conductance], layout=Layout(align_items='center', width='800px')))
+            # check for excetions
+            if isinstance(res, str):
+                with out:
+                    print(res)
+            else:
+                V, m, h, n = res.y
+                depol = False
+
+                na_conductance = self.cond_na(m, h)
+                k_conductance = self.cond_k(n)
+
+                # index for label timesteps:
+                # 0=depolarisation, 1=repolarisation, 2=hyperpolarisation
+                j = 0
+
+                # positioning offset of the labels
+                offset = np.array([[-1, 10],
+                                   [0, 10],
+                                   [1, -15]])
+
+                # reset (hide) AP label marks
+                for mark in fig_voltage.marks[3:] + fig_conductance.marks[2:]:
+                    mark.x = [-50]
+
+                line_voltage = fig_voltage.marks[0]
+                line_conductance_na = fig_conductance.marks[0]
+                line_conductance_k = fig_conductance.marks[1]
+
+                # check for depolarisation
+                if np.max(V) > -55:
+                    depol = True
+                    idx_repol = np.argmax(V)
+                    timesteps = [np.argmax(V > -55), idx_repol,
+                                 idx_repol + np.argmax(V[idx_repol:] < self.e_m)]
+
+                # animation loop
+                for i in range(len(res.t)):
+                    # animation speed
+                    time.sleep(0.025)
+
+                    # display the lines and label for the stages of AP
+                    if depol:
+                        if i == timesteps[j] + 2:
+                            fig_voltage.marks[2*(j+1) + 1].x = \
+                                [res.t[timesteps[j]], res.t[timesteps[j]]]
+                            fig_conductance.marks[2*(j+2)].x = \
+                                [res.t[timesteps[j]], res.t[timesteps[j]]]
+
+                            fig_voltage.marks[2*(j+1)+2].x = \
+                                [res.t[timesteps[j]] + offset[j][0]]
+                            fig_voltage.marks[2*(j+1)+2].y = \
+                                [V[timesteps[j]] + offset[j][1]]
+
+                            j += 1
+                            if j > 2:
+                                depol = False
+                            time.sleep(1)
+
+                    with line_voltage.hold_sync(), \
+                            line_conductance_na.hold_sync(), \
+                            line_conductance_k.hold_sync():
+                        line_conductance_na.x = res.t
+                        line_conductance_na.y = na_conductance[:i]
+                        line_conductance_k.x = res.t
+                        line_conductance_k.y = k_conductance[:i]
+                        line_voltage.x = res.t
+                        line_voltage.y = V[:i]
+
+        for idx, b in enumerate(buttons):
+            b.on_click(functools.partial(play, bidx=idx))
+
+        display(VBox([*buttons[:2],
+                      HBox([slider, buttons[2]]),
+                      fig_voltage, fig_conductance, out],
+                     layout=Layout(align_items='center', width='800px')))
 
     def plot_AP_TTX_TEA(self):
         """
-        calculate and plot
+        Plot for showing the influence of Tetrodotoxin and Tetraethylammonium.
+
+        Initilizes Widgets and plots and runs animation.
+
+        This function is to be called from a Jupyter notebook.
         """
-        interval = (0,50)
-        
+        interval = (0, 30)
+
         dropdown = Dropdown(description="Select:",
-                            options=['Tetrodotoxin (TTX)', 'Tetraethylammonium (TEA)'])
+                            options=['Tetrodotoxin (TTX)',
+                                     'Tetraethylammonium (TEA)'])
 
-        # labels: MathJax not supported with bqplot
-        fig_conductance = self.init_figure('700px', '200px', 'Conductance (K)', interval, (-1, 50), 2)
-        fig_voltage = self.init_figure('700px', '400px', 'Membrane voltage', interval, (-100, 100), 1)
-        
-        b20 = Button(description='-50 mV')
-        b40 = Button(description='10 mV')
-        b60 = Button(description='15 mV')
-                
-        def play(b, Vc):
-            self.set_parms([40.0, 36.0, 0.3], np.array([-115.0, 12.0, 0.0]))
-            X = self.simulation(interval, False, [(5, Vc)],
-                                dropdown.value == 'Tetrodotoxin (TTX)',
-                                dropdown.value == 'Tetraethylammonium (TEA)')
+        fig_conductance = self.init_figure('700px', '200px', 'Conductance (K)',
+                                           interval, (-1, 50), 2)
+        fig_voltage = self.init_figure('700px', '400px', 'Membrane voltage',
+                                       interval, (-100, 80), 1)
 
-            V, m, h, n = X.y
-            na_conductance = self.C_Na(m, h)
-            k_conductance = self.C_K(n)
+        button = Button(description='50 mV')
 
-            Vol = fig_voltage.marks[0]
-            C1 = fig_conductance.marks[0]
-            C2 = fig_conductance.marks[1]
+        out = Output()
 
-            for i in range(len(X.t)):
-                time.sleep(0.025)
-                
-                with Vol.hold_sync(), C1.hold_sync(), C2.hold_sync():
-                    C1.x = X.t
-                    C1.y = na_conductance[:i]
-                    C2.x = X.t
-                    C2.y = k_conductance[:i]
-                    Vol.x = X.t
-                    Vol.y = V[:i]
+        def play(b):
+            """
+            Mark animation function
 
-        b20.on_click(functools.partial(play, Vc=-100))
-        b40.on_click(functools.partial(play, Vc=10))
-        b60.on_click(functools.partial(play, Vc=55))
-                    
-        display(VBox([dropdown, b60, fig_voltage, fig_conductance], layout=Layout(align_items='center', width='800px')))
-        
+            Parameters
+            ----------
+            b : ipywidget Button object
+                needs to be passed as first parameter
+            """
+            # here we need to tweak the model because with one of the ion
+            # channels, the numerical intergration is unstable
+            self.set_parms([40.0, 36.0, 0.3], np.array([55.0, -77.0, -65.0]))
+            with out:
+                clear_output()
+            res = self.simulation(interval, False, [(5, 6, 55)],
+                                  dropdown.value == 'Tetrodotoxin (TTX)',
+                                  dropdown.value == 'Tetraethylammonium (TEA)')
+
+            # check for excetions
+            if isinstance(res, str):
+                with out:
+                    print(res)
+            else:
+                V, m, h, n = res.y
+                na_conductance = self.cond_na(m, h)
+                k_conductance = self.cond_k(n)
+
+                line_voltage = fig_voltage.marks[0]
+                line_conductance_na = fig_conductance.marks[0]
+                line_conductance_k = fig_conductance.marks[1]
+
+                for i in range(len(res.t)):
+                    time.sleep(0.025)
+
+                    with line_voltage.hold_sync(), \
+                            line_conductance_na.hold_sync(), \
+                            line_conductance_k.hold_sync():
+                        line_conductance_na.x = res.t
+                        line_conductance_na.y = na_conductance[:i]
+                        line_conductance_k.x = res.t
+                        line_conductance_k.y = k_conductance[:i]
+                        line_voltage.x = res.t
+                        line_voltage.y = V[:i]
+
+        button.on_click(play)
+
+        display(VBox([dropdown, button, fig_voltage, fig_conductance],
+                     layout=Layout(align_items='center', width='800px')))
+
+    def plot_spike_train(self):
+        """
+        Plot for spike trains.
+
+        Initilizes Widgets and plots and runs animation.
+
+        This function is to be called from a Jupyter notebook.
+        """
+        interval = (0, 50)
+
+        fig_voltage = self.init_figure('700px', '400px', 'Membrane voltage',
+                                       interval, (-100, 100), 1)
+
+        # create a fast interval selector by passing in the res scale and
+        # the line mark on which the selector operates
+        intsel = BrushIntervalSelector(marks=fig_voltage.marks,
+                                       scale=fig_voltage.marks[0].scales["x"])
+
+        # set the interval selector on the figure
+        fig_voltage.interaction = intsel
+
+        button = Button(description='mV')
+
+        slider = IntSlider(value=50, min=1, max=100, step=1,
+                           continuous_update=True,
+                           readout=True)
+
+        out = Output()
+
+        def play(b):
+            """
+            Mark animation function
+
+            Parameters
+            ----------
+            b : ipywidget Button object
+                needs to be passed as first parameter
+            """
+            self.reset_parms()
+            with out:
+                clear_output()
+            if intsel.selected is not None:
+                vol = slider.value
+                res = self.simulation(interval, False,
+                                      [(intsel.selected[0],
+                                        intsel.selected[1],
+                                       vol)])
+
+                if isinstance(res, str):
+                    with out:
+                        print(res)
+                else:
+                    V, _, _, _ = res.y
+
+                    Vol = fig_voltage.marks[0]
+
+                    for i in range(len(res.t)):
+                        time.sleep(0.025)
+
+                        with Vol.hold_sync():
+                            Vol.x = res.t
+                            Vol.y = V[:i]
+
+        button.on_click(play)
+
+        display(VBox([HBox([slider, button]), fig_voltage, out],
+                layout=Layout(align_items='center', width='800px')))
 
     def plot_refractory(self):
         """
-        calculate and plot
+        Plot for refractory periodes.
+
+        Initilizes Widgets and plots and runs animation.
+
+        This function is to be called from a Jupyter notebook.
         """
-        interval = (0,50)
+        interval = (0, 50)
 
-        fig_voltage = self.init_figure('700px', '400px', 'Membrane voltage', interval, (-100, 100), 1)
-        
-        # create a fast interval selector by passing in the X scale and the line mark on which the selector operates
-        intsel = BrushIntervalSelector(marks=fig_voltage.marks, scale=fig_voltage.marks[0].scales["x"])
-        fig_voltage.interaction = intsel  # set the interval selector on the figure
+        fig_voltage = self.init_figure('700px', '400px', 'Membrane voltage',
+                                       interval, (-100, 100), 1)
 
-        
-        b20 = Button(description='-50 mV')
-        b40 = Button(description='10 mV')
-        b60 = Button(description='15 mV')
-                
-        def play(b, Vc):
+        # create a fast interval selector by passing in the res scale and
+        # the line mark on which the selector operates
+        intsel = BrushIntervalSelector(marks=fig_voltage.marks,
+                                       scale=fig_voltage.marks[0].scales["x"])
+
+        # set the interval selector on the figure
+        fig_voltage.interaction = intsel
+
+        button = Button(description='mV')
+
+        slider = IntSlider(value=50, min=1, max=100, step=1,
+                           continuous_update=True,
+                           readout=True)
+
+        out = Output()
+
+        def play(b):
+            """
+            Mark animation function
+
+            Parameters
+            ----------
+            b : ipywidget Button object
+                needs to be passed as first parameter
+            """
             self.reset_parms()
-            X = self.simulation(interval, False, [(intsel.selected[0], Vc), (intsel.selected[1], Vc)])
+            with out:
+                clear_output()
+            if intsel.selected is not None:
+                vol = slider.value
+                res = self.simulation(interval, False,
+                                      [(intsel.selected[0],
+                                        intsel.selected[0] + 1,
+                                       vol),
+                                       (intsel.selected[1],
+                                        intsel.selected[1] + 1,
+                                       vol)])
 
-            V, _, _, _ = X.y
+                if isinstance(res, str):
+                    with out:
+                        print(res)
+                else:
+                    V, _, _, _ = res.y
 
-            Vol = fig_voltage.marks[0]
+                    Vol = fig_voltage.marks[0]
 
-            for i in range(len(X.t)):
-                time.sleep(0.025)
-                
-                with Vol.hold_sync():
-                    Vol.x = X.t
-                    Vol.y = V[:i]
+                    for i in range(len(res.t)):
+                        time.sleep(0.025)
 
-        b20.on_click(functools.partial(play, Vc=-100))
-        b40.on_click(functools.partial(play, Vc=10))
-        b60.on_click(functools.partial(play, Vc=55))
-        
-        display(VBox([b60, fig_voltage], layout=Layout(align_items='center', width='800px')))
-        
-        
+                        with Vol.hold_sync():
+                            Vol.x = res.t
+                            Vol.y = V[:i]
+
+        button.on_click(play)
+
+        display(VBox([HBox([slider, button]), fig_voltage, out],
+                layout=Layout(align_items='center', width='800px')))
+
     def plot_explorer(self):
         """
-        calculate and plot
-        """
-        interval = (0,50)
-        
-        fig_conductance = self.init_figure('700px', '200px', 'Conductance (K)', interval, (-1, 50), 4)
-        fig_voltage = self.init_figure('700px', '400px', 'Membrane voltage', interval, (-100, 100), 2)
-        
-        # create a fast interval selector by passing in the X scale and the line mark on which the selector operates
-        intsel = BrushIntervalSelector(marks=fig_voltage.marks, scale=fig_voltage.marks[0].scales["x"])
-        fig_voltage.interaction = intsel  # set the interval selector on the figure
+        Plot for parameter influence.
 
-        gNa = BoundedIntText(value=self.gNa, min=self.gNa - 50, max=self.gNa + 50, step=1, description='gNa:', disabled=False)
-        gK = BoundedIntText(value=self.gK, min=self.gK - 50, max=self.gK + 50, step=1, description='gK:', disabled=False)
-        ENa = BoundedIntText(value=self._V(self.ENa), min=self._V(self.ENa) - 50, max=self._V(self.ENa) + 50, step=1, description='ENa:', disabled=False)
-        EK = BoundedIntText(value=self._V(self.EK), min=self._V(self.EK) - 50, max=self._V(self.EK) + 50, step=1, description='EK:', disabled=False)
+        Initilizes Widgets and plots and runs animation.
+
+        This function is to be called from a Jupyter notebook.
+        """
+        self.reset_parms()
+        interval = (0, 25)
+
+        fig_conductance = self.init_figure('700px', '200px', 'Conductance (K)',
+                                           interval, (-1, 50), 4)
+        fig_voltage = self.init_figure('700px', '400px', 'Membrane voltage',
+                                       interval, (-140, 80), 2)
+
+        g_na = BoundedIntText(value=self.g_na,
+                              min=self.g_na - 30,
+                              max=self.g_na + 30,
+                              step=10,
+                              description='Sodium conductance:',
+                              disabled=False)
+
+        g_k = BoundedIntText(value=self.g_k,
+                             min=self.g_k - 15,
+                             max=self.g_k + 15,
+                             step=10,
+                             description='Potassium conductance',
+                             disabled=False)
+
+        e_na = BoundedIntText(value=self.e_na,
+                              min=self.e_na - 50,
+                              max=self.e_na + 50,
+                              step=10,
+                              description='Sodium reversal potential',
+                              disabled=False)
+
+        e_k = BoundedIntText(value=self.e_k,
+                             min=self.e_k - 50,
+                             max=self.e_k + 50,
+                             step=10,
+                             description='Potassium reversal potential',
+                             disabled=False)
+
+        out = Output()
 
         # draw initial lines
-        Vc = 50
-        X = self.simulation(interval, False, [(5, Vc)])
+        vol = 50
+        res = self.simulation(interval, False, [(5, 6, vol)])
 
-        V, m, h, n = X.y
-        na_conductance = self.C_Na(m, h)
-        k_conductance = self.C_K(n)
+        V, m, h, n = res.y
+        na_conductance = self.cond_na(m, h)
+        k_conductance = self.cond_k(n)
 
-        Vol = fig_voltage.marks[0]
-        C1 = fig_conductance.marks[0]
-        C2 = fig_conductance.marks[1]
-        
-        Vol.line_style='dashed'
-        C1.line_style='dashed'
-        C2.line_style='dashed'
-        Vol.stroke_width = .5
+        line_voltage = fig_voltage.marks[0]
+        line_conductance_na = fig_conductance.marks[0]
+        line_conductance_k = fig_conductance.marks[1]
 
-        with Vol.hold_sync(), C1.hold_sync(), C2.hold_sync():
-            C1.x = X.t
-            C1.y = na_conductance
-            C2.x = X.t
-            C2.y = k_conductance
-            Vol.x = X.t
-            Vol.y = V
+        line_voltage.line_style = 'dashed'
+        line_conductance_k.line_style = 'dashed'
+        line_conductance_na.line_style = 'dashed'
+        line_voltage.stroke_width = .5
+        line_conductance_k.stroke_width = .5
+        line_conductance_na.stroke_width = .5
+
+        with line_voltage.hold_sync(), \
+                line_conductance_na.hold_sync(), \
+                line_conductance_k.hold_sync():
+            line_conductance_na.x = res.t
+            line_conductance_na.y = na_conductance
+            line_conductance_k.x = res.t
+            line_conductance_k.y = k_conductance
+            line_voltage.x = res.t
+            line_voltage.y = V
 
         def on_change(change):
-            Vc=50
-            
-            self.gNa = gNa.value            
-            self.gK = gK.value            
-            self.ENa = self._V(ENa.value)
-            self.EK = self._V(EK.value)
-            
-            X = self.simulation(interval, False, [(5, Vc)])
+            with out:
+                clear_output()
 
-            V, m, h, n = X.y
-            na_conductance = self.C_Na(m, h)
-            k_conductance = self.C_K(n)
+            vol = 50
 
-            Vol = fig_voltage.marks[1]
-            C1 = fig_conductance.marks[2]
-            C2 = fig_conductance.marks[3]
+            self.g_na = g_na.value
+            self.g_k = g_k.value
+            self.e_na = e_na.value
+            self.e_k = e_k.value
 
-            with Vol.hold_sync(), C1.hold_sync(), C2.hold_sync():
-                C1.x = X.t
-                C1.y = na_conductance
-                C2.x = X.t
-                C2.y = k_conductance
-                Vol.x = X.t
-                Vol.y = V
-        
-        gNa.observe(on_change, names='value')
-        gK.observe(on_change, names='value')
-        ENa.observe(on_change, names='value')
-        EK.observe(on_change, names='value')
-        
-        display(VBox([gNa, gK, ENa, EK, fig_voltage, fig_conductance], layout=Layout(align_items='center', width='800px')))
-        
-        
+            res = self.simulation(interval, False, [(5, 6, vol)])
+
+            if isinstance(res, str):
+                with out:
+                    print(res)
+            else:
+                V, m, h, n = res.y
+                na_conductance = self.cond_na(m, h)
+                k_conductance = self.cond_k(n)
+
+                line_voltage = fig_voltage.marks[1]
+                line_conductance_na = fig_conductance.marks[2]
+                line_conductance_k = fig_conductance.marks[3]
+
+                with line_voltage.hold_sync(), \
+                        line_conductance_na.hold_sync(), \
+                        line_conductance_k.hold_sync():
+                    line_conductance_na.x = res.t
+                    line_conductance_na.y = na_conductance
+                    line_conductance_k.x = res.t
+                    line_conductance_k.y = k_conductance
+                    line_voltage.x = res.t
+                    line_voltage.y = V
+
+        g_na.observe(on_change, names='value')
+        g_k.observe(on_change, names='value')
+        e_na.observe(on_change, names='value')
+        e_k.observe(on_change, names='value')
+
+        display(VBox([g_na, g_k, e_na, e_k, fig_voltage, fig_conductance, out],
+                     layout=Layout(align_items='center', width='800px')))
