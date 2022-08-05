@@ -31,7 +31,7 @@ This application was developed as a term project for the Scientific Python cours
 
 ### As a standalone tornado application
 
-Option 1: [Voila](https://github.com/inceo/hhapl)
+Option 1: [Voila](https://github.com/inceo/hhapl) (recommended)
 ```
 voila notebook.ipynb
 ```
@@ -40,9 +40,7 @@ run `voila --help`.
 
 ### Jupyter `notebook` or `jupyterlab`
 
-Option 2:
-
-The project notebook can also opened in a Jupyter [notebook](https://github.com/jupyter/notebook) (version >=4.2) or in [JupyterLab](https://github.com/jupyterlab/jupyterlab). 
+Option 2: The project notebook can also opened in a Jupyter [notebook](https://github.com/jupyter/notebook) (version >=4.2) or in [JupyterLab](https://github.com/jupyterlab/jupyterlab). 
 
 ## Inspiration
 
