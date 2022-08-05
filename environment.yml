@@ -1,0 +1,12 @@
+name: hhapl
+dependencies:
+  - python>=3.10
+  - pip
+  - pip:
+    - bqplot==0.12.33
+    - ipywidgets==7.7.1
+    - numpy==1.23.1
+    - scipy==1.9.0
+    - voila==0.3.6
+    - func_timeout==4.3.5
+    - ipython==8.4.0
