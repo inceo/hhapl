@@ -1,33 +1,37 @@
 import numpy as np
 import time
 
+# ipywidgets as interactive Widgets for the Jupyter notebooks (and Voila)
 from ipywidgets import Layout, VBox, Button, Dropdown, BoundedIntText
 
+# bqplot as plotting library for Jupyter notebooks
 import bqplot.pyplot as plt
 from bqplot.interacts import BrushIntervalSelector
 from bqplot import Label, LinearScale, Axis, Lines, Figure
 
+# project classes
 from hhapl import HodgkinHuxley
 
+# Tweak for working with ipywidgets
 # https://github.com/jupyter-widgets/ipywidgets/issues/2103
 import functools
 
-class Plot(HodgkinHuxley.HodgkinHuxley):
+class Plots(HodgkinHuxley.HodgkinHuxley):
     """
-    Na-K-plot class
+    Plot class for the Hodgkin-Huxley action potential lab
     
-    TODO
+    - generates all plots displayed in the application
+    - initilizes bqplot figures and interactive Widgets
+    - interacts with user input and manages the animations
     """
 
     def __init__(self):
         """
-        Initilize plot class
+        Initilizing the plot class and inheriting Hodgkin-Huxley model class
         """
-        
-        # inherit Hodgkin-Huxley model class
         super().__init__()
         
-        # set standard parameters
+        #  standard parameters
         self.interval = (0, 20)
         self.clamped = True
         self.start = 5
@@ -36,6 +40,8 @@ class Plot(HodgkinHuxley.HodgkinHuxley):
     def calc(self, Vc):
         # TODO redundant function
         X = self.simulation(self.interval, self.clamped, [self.start, self.end, Vc], '')
+        if isinstance(X, str):
+            print(X)
         V = Vc * np.logical_and(X.t > self.start, X.t < self.end)
         
         return V, X
@@ -45,11 +51,35 @@ class Plot(HodgkinHuxley.HodgkinHuxley):
         """
         Initilize figure
         
-        bqplot allows only to change the current figure, but we are mostly dealing with
-        multiple-figure-plots and since subplots are not available in bqplot, we pre-register
-        or initilize all elements (marks). We do this to have a consistent order to
-        later animate or manipulate specific marks.
+        bqplot allows only to change (adding elements such as marks) the current figure,
+        but we are mostly dealing with multiple-figure-plots and since subplots are not
+        available in bqplot, we pre-register or initilize all elements (marks). We do
+        this to have a consistent order to later animate or manipulate specific marks.
         
+        Parameters
+        ----------
+        width : int
+            figure width
+        height : int
+            figure height
+        width : int
+            figure width
+        label : string
+            label corresponding to marks (vline, hline, e.g. 'Threshold')
+        xlim : tuple of ints
+            x limits of the current axes
+        ylim : tuple of ints
+            y limits of the current axes
+        num_lines : int
+            number of lines added to the figure
+        ap_labels : bool
+            if True, add predefined marks (vline, hline, label) to the figure
+            in order to highlight the stages of an action potential (ap)           
+            
+        Returns
+        -------
+        fig : bqplot.figure.Figure object
+            figure object
         """
         fig = plt.figure()
         
@@ -57,10 +87,11 @@ class Plot(HodgkinHuxley.HodgkinHuxley):
             "color": {"visible": False},
         }
         
+        # TODO better colors
         colors = [['blue'],['green'],['red'],['orange']]
         
         # set the number of lines, values to be set on runtime (animation)
-        # [0] to fixate certain color to certain line ([] not working)
+        # [0] to fixate certain color to certain line ([] would not work)
         for i in range(num_lines):
             plt.plot([0], [0], colors=colors[i], axes_options=axes_options)
             # TODO legend for conductance
@@ -80,6 +111,7 @@ class Plot(HodgkinHuxley.HodgkinHuxley):
             plt.label(text=['Hyperpolarisation'], x=[-50], y=[0], colors=['black'], align='start', default_size=12, rotate_angle = 0)
         
         # TODO compact
+        # TODO ylabel only on the last plot
         # set plot properties
         plt.xlabel('Time (ms)')
         plt.ylabel(label)
