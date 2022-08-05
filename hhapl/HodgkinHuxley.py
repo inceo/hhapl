@@ -133,7 +133,7 @@ class HodgkinHuxley():
         integrate
         """
         m, h, n = X
-        time.sleep(3)
+        # time.sleep(3)
         start, end, Vc = inputs
 
         V = self._I_clamped(t, start, end, Vc)
