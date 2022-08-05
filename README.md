@@ -7,7 +7,7 @@
 <img align="right" width="10%" height="10%" src="https://upload.wikimedia.org/wikipedia/commons/c/c7/Andrew_Fielding_Huxley_nobel.jpg" alt="Andrew Huxley">
 <img align="right" width="10%" height="10%" src="https://upload.wikimedia.org/wikipedia/commons/0/07/Alan_Lloyd_Hodgkin_nobel.jpg" alt="Andrew Huxley">
 
-# [Hodgkin-Huxley action potential lab](http://inceo.github.com/hhapl)
+# [Hodgkin-Huxley action potential lab](https://github.com/inceo/hhapl)
 
 Educational web application for the purpose of learning how action potentials are initiated based on the Hodgkins and Huxley model.
 
