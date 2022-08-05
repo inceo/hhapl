@@ -56,7 +56,7 @@ class Plots(HodgkinHuxley.HodgkinHuxley):
         label : string
             label corresponding to marks (vline, hline, e.g. 'Threshold')
         xlim : tuple of ints
-            x limits of the current axes
+
         ylim : tuple of ints
             y limits of the current axes
         num_lines : int
@@ -76,31 +76,37 @@ class Plots(HodgkinHuxley.HodgkinHuxley):
             "color": {"visible": False},
         }
 
-        # TODO better colors
         colors = [['blue'], ['green'], ['red'], ['orange']]
 
         # set the number of lines, values to be set on runtime (animation)
         # [0] to fixate certain color to certain line ([] would not work)
         for i in range(num_lines):
             plt.plot([0], [0], colors=colors[i], axes_options=axes_options)
-            # TODO legend for conductance
 
-        # TODO for
         if ap_labels:
-            plt.hline(level=-55, line_style='dashed', stroke_width=1, label='Threshold')
-            plt.label(text=['Threshold'], x=[0], y=[-50], colors=['black'], align='start', default_size=10, rotate_angle = 0)
-            
-            plt.vline(level=-50, line_style='dashed', stroke_width=1, label='Depolarisation')
-            plt.label(text=['Depolarisation'], x=[-50], y=[0], colors=['black'], align='start', default_size=12, rotate_angle = -90)
-            
-            plt.vline(level=-50, line_style='dashed', stroke_width=1, label='Repolarisation')
-            plt.label(text=['Repolarisation'], x=[-50], y=[0], colors=['black'], align='middle', default_size=12, rotate_angle = 0)
-            
-            plt.vline(level=-50, line_style='dashed', stroke_width=1, label='Hyperpolarisation')
-            plt.label(text=['Hyperpolarisation'], x=[-50], y=[0], colors=['black'], align='start', default_size=12, rotate_angle = 0)
-        
-        # TODO compact
-        # TODO ylabel only on the last plot
+            plt.hline(level=-55, line_style='dashed',
+                      stroke_width=1, label='Threshold')
+            plt.label(text=['Threshold'], x=[0], y=[-50], colors=['black'],
+                      align='start', default_size=10, rotate_angle=0)
+
+            plt.vline(level=-50, line_style='dashed',
+                      stroke_width=1, label='Depolarisation')
+            plt.label(text=['Depolarisation'], x=[-50], y=[0],
+                      colors=['black'], align='start',
+                      default_size=12, rotate_angle=-90)
+
+            plt.vline(level=-50, line_style='dashed',
+                      stroke_width=1, label='Repolarisation')
+            plt.label(text=['Repolarisation'], x=[-50], y=[0],
+                      colors=['black'], align='middle',
+                      default_size=12, rotate_angle=0)
+
+            plt.vline(level=-50, line_style='dashed',
+                      stroke_width=1, label='Hyperpolarisation')
+            plt.label(text=['Hyperpolarisation'], x=[-50], y=[0],
+                      colors=['black'], align='start',
+                      default_size=12, rotate_angle=0)
+
         # set plot properties
         plt.xlabel('Time (ms)')
         plt.ylabel(label)
@@ -318,7 +324,7 @@ class Plots(HodgkinHuxley.HodgkinHuxley):
         button_config = [5, 15, 0]
 
         fig_conductance = self.init_figure('700px', '200px',
-                                           'Conductance (K)',
+                                           'Conductance',
                                            interval, (-1, 50), 2, True)
 
         fig_voltage = self.init_figure('700px', '400px',
@@ -451,7 +457,7 @@ class Plots(HodgkinHuxley.HodgkinHuxley):
                             options=['Tetrodotoxin (TTX)',
                                      'Tetraethylammonium (TEA)'])
 
-        fig_conductance = self.init_figure('700px', '200px', 'Conductance (K)',
+        fig_conductance = self.init_figure('700px', '200px', 'Conductance',
                                            interval, (-1, 50), 2)
         fig_voltage = self.init_figure('700px', '400px', 'Membrane voltage',
                                        interval, (-100, 80), 1)
@@ -659,7 +665,7 @@ class Plots(HodgkinHuxley.HodgkinHuxley):
         self.reset_parms()
         interval = (0, 25)
 
-        fig_conductance = self.init_figure('700px', '200px', 'Conductance (K)',
+        fig_conductance = self.init_figure('700px', '200px', 'Conductance',
                                            interval, (-1, 50), 4)
         fig_voltage = self.init_figure('700px', '400px', 'Membrane voltage',
                                        interval, (-140, 80), 2)
