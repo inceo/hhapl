@@ -35,7 +35,7 @@ class Plots(HodgkinHuxley.HodgkinHuxley):
         super().__init__()
 
     def init_figure(self, width, height, label, xlim, ylim,
-                    num_lines, ap_labels=False):
+                    num_lines, labels=False, ap_labels=False):
         """
         Initilize figure
 
@@ -78,10 +78,15 @@ class Plots(HodgkinHuxley.HodgkinHuxley):
 
         colors = [['blue'], ['green'], ['red'], ['orange']]
 
+        set_labels = ['', '', '', '']
+        if labels:
+            set_labels = labels
+
         # set the number of lines, values to be set on runtime (animation)
         # [0] to fixate certain color to certain line ([] would not work)
         for i in range(num_lines):
-            plt.plot([0], [0], colors=colors[i], axes_options=axes_options)
+            plt.plot([0], [0], colors=colors[i], axes_options=axes_options,
+                     labels=set_labels[i])
 
         if ap_labels:
             plt.hline(level=-55, line_style='dashed',
@@ -112,9 +117,12 @@ class Plots(HodgkinHuxley.HodgkinHuxley):
         plt.ylabel(label)
         plt.xlim(*xlim)
         plt.ylim(*ylim)
+        if labels:
+            plt.legend()
         fig.layout.width = width
         fig.layout.height = height
         fig.layout.padding = '0px'
+        fig.legend_location = 'top-right'
         fig.fig_margin = {'top': 10, 'bottom': 35, 'left': 50, 'right': 50}
 
         fig.legend = False
@@ -325,11 +333,11 @@ class Plots(HodgkinHuxley.HodgkinHuxley):
 
         fig_conductance = self.init_figure('700px', '200px',
                                            'Conductance',
-                                           interval, (-1, 50), 2, True)
+                                           interval, (-1, 50), 2, False, True)
 
         fig_voltage = self.init_figure('700px', '400px',
                                        'Membrane voltage',
-                                       interval, (-120, 80), 1, True)
+                                       interval, (-120, 80), 1, False, True)
 
         buttons = [Button(description='mV') if v == 0
                    else Button(description=str(v) + ' mV')
@@ -458,7 +466,7 @@ class Plots(HodgkinHuxley.HodgkinHuxley):
                                      'Tetraethylammonium (TEA)'])
 
         fig_conductance = self.init_figure('700px', '200px', 'Conductance',
-                                           interval, (-1, 50), 2)
+                                           interval, (-1, 50), 2, ['Na', 'K'])
         fig_voltage = self.init_figure('700px', '400px', 'Membrane voltage',
                                        interval, (-100, 80), 1)
 
@@ -666,7 +674,8 @@ class Plots(HodgkinHuxley.HodgkinHuxley):
         interval = (0, 25)
 
         fig_conductance = self.init_figure('700px', '200px', 'Conductance',
-                                           interval, (-1, 50), 4)
+                                           interval, (-1, 50), 4,
+                                           ['Na', 'K', 'Na', 'K'])
         fig_voltage = self.init_figure('700px', '400px', 'Membrane voltage',
                                        interval, (-140, 80), 2)
 
