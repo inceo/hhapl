@@ -31,6 +31,7 @@ This application was developed as a term project for the Scientific Python cours
 
 ## Requirements
 
+- this project was developed and tested with Python 3.10
 - Installation via pip:
   ```shell
   pip install -r requirements.txt
