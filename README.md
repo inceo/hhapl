@@ -33,7 +33,6 @@ This application was developed as a term project for the Scientific Python cours
 
 - This project was developed and tested with Python 3.10 on a linux machine
 - It should however also work on other operation systems with the requirements installed as described
-
 - Installation via pip:
   ```shell
   pip install -r requirements.txt
