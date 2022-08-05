@@ -11,7 +11,7 @@
 
 Educational web application for the purpose of learning how action potentials are initiated based on the Hodgkins and Huxley model.
 
-The project generates the plots 'on the fly' based on the choosen inputs. The calculations behind this follow the famous Hodgkins and Huxley model. In 1952 Alan Hodgkin and Andrew Huxley formulated the model to explain the ionic mechanisms underlying the initiation of action potentials in neurons. They received the Nobel Prize in Physiology or Medicine for this work (1963).
+The following plots are generated 'on the fly' based on the chosen inputs. The calculations behind this follow the famous Hodgkins and Huxley model. In 1952 __Alan Hodgkin__ and __Andrew Huxley__ formulated the model to explain the ionic mechanisms underlying the initiation of action potentials in neurons. They received the Nobel Prize in Physiology or Medicine for this work (1963).
 
 This application was developed as a term project for the Scientific Python course (summer '22) of the Cognitive Science program at Osnabrück University by Christian Rohde.
 
