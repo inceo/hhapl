@@ -4,3 +4,4 @@ numpy==1.23.1
 scipy==1.9.0
 voila==0.3.6
 func_timeout==4.3.5
+ipython==8.4.0
